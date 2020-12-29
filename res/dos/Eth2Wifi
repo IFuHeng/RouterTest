@@ -1,0 +1,3 @@
+netsh interface set interface "以太网" disabled
+netsh interface set interface "WLAN" enabled
+ipconfig
