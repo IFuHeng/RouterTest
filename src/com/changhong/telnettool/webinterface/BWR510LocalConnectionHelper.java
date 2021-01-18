@@ -286,7 +286,6 @@ public class BWR510LocalConnectionHelper implements HttpRequestMethod {
         final String body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"" + METHOD_RESET + "\",\"params\":{\"src_type\":1}}";
 
         try {
-
             String response = httpPostWithJson(url, body, cookies);
             SettingResponseAllBeen been
                     = JSONObject.parseObject(response, SettingResponseAllBeen.class);
@@ -323,7 +322,6 @@ public class BWR510LocalConnectionHelper implements HttpRequestMethod {
         }
         requireBeen.setDev(list);
         final String body = new RequestBeen<>(METHOD_NETWORK_ADD, requireBeen).toJsonString();
-
 
         try {
             String response = httpPostWithJson(url, body, cookies);
@@ -1419,7 +1417,7 @@ public class BWR510LocalConnectionHelper implements HttpRequestMethod {
                 print("====~ response = " + line);
                 return line;
             } else if (response.code() == 401) {
-                throw new AuthenticationException("unauthorized");
+                throw new java.net.ConnectException("unauthorized");
             } else {
                 print("====~ postConnection.getResponseCode() = " + response.code() + ", postConnection.getResponseMessage() = " + response.message());
                 throw new IOException(response.message());

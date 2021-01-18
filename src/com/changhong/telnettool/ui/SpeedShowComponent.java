@@ -1,17 +1,16 @@
-package com.changhong.telnettool.dialog;
+package com.changhong.telnettool.ui;
 
-import com.changhong.telnettool.component.XyAxisCanvas;
 import com.changhong.telnettool.been.LineBeen;
 import com.changhong.telnettool.been.NodeStrQueue;
+import com.changhong.telnettool.component.XyAxisCanvas;
 import javafx.util.Pair;
 
+import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
-public class SpeedShowDialog extends Dialog {
+public class SpeedShowComponent extends JPanel {
 
-    private static final int COUNT_NODE = 10;
+    private static final int COUNT_NODE = 20;
 
     private XyAxisCanvas mXyAxisCvs;
     private long maxSpeed = 1024;
@@ -21,8 +20,7 @@ public class SpeedShowDialog extends Dialog {
     private NodeStrQueue mUploadNode;
     private NodeStrQueue mDownloadNode;
 
-    public SpeedShowDialog(Frame owner) {
-        super(owner, "无线网速甘特图");
+    public SpeedShowComponent() {
         String[] xAxis = new String[COUNT_NODE];
         for (int i = 0; i < xAxis.length; i++) {
             xAxis[i] = String.valueOf(i);
@@ -35,20 +33,8 @@ public class SpeedShowDialog extends Dialog {
             yAxisStr[i] = getSpeedString(yAxis[i]);
         }
         mXyAxisCvs = new XyAxisCanvas(yAxis, yAxisStr, xAxis);
-        mXyAxisCvs.setSize(600, 400);
+        mXyAxisCvs.setShowPointStr(false);
         add(mXyAxisCvs);
-        pack();
-
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                if (e.getSource() instanceof Dialog) {
-                    Dialog dialog = (Dialog) e.getSource();
-                    dialog.dispose();
-                }
-                super.windowClosing(e);
-            }
-        });
     }
 
     public void appendDownloadSpeedNode(long speed) {
@@ -58,7 +44,7 @@ public class SpeedShowDialog extends Dialog {
         }
 
         mDownloadNode.push(new Pair<>(speed, getSpeedString(speed)));
-
+//        System.err.println("appendDownloadSpeedNode   ====>    " + mDownloadNode.peek());
         setMaxSpeed(speed);
         mXyAxisCvs.repaint();
     }
@@ -70,7 +56,7 @@ public class SpeedShowDialog extends Dialog {
             mXyAxisCvs.addLine(new LineBeen("上行速度", mUploadSpeedColor, mUploadNode));
         }
         mUploadNode.push(new Pair<>(speed, getSpeedString(speed)));
-
+//        System.err.println("appendUploadSpeedNode   ====>    " + mUploadNode.peek());
         setMaxSpeed(speed);
         mXyAxisCvs.repaint();
     }
@@ -85,7 +71,7 @@ public class SpeedShowDialog extends Dialog {
                 maxValue = Math.max(mUploadNode.elementAt(i).getKey(), maxValue);
             for (int i = 0; i < mDownloadNode.size(); i++)
                 maxValue = Math.max(mDownloadNode.elementAt(i).getKey(), maxValue);
-            if (maxValue < maxSpeed / 5)
+            if (maxValue < maxSpeed / 2)
                 maxSpeed = getTotleValue(maxValue);
         }
 

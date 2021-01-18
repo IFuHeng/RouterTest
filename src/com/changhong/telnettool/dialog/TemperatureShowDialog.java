@@ -16,8 +16,8 @@ public class TemperatureShowDialog extends Dialog {
     private static final int COUNT_NODE = 10;
 
     private XyAxisCanvas mXyAxisCvs;
-    private int maxTemperature = 40;
-    private int minTemperature = 30;
+    private long maxTemperature = 40;
+    private long minTemperature = 30;
 
     private NodeStrQueue m5GTemperatureNode;
     private NodeStrQueue m2GTemperatureNode;
@@ -28,7 +28,7 @@ public class TemperatureShowDialog extends Dialog {
         for (int i = 0; i < xAxis.length; i++) {
             xAxis[i] = String.valueOf(i);
         }
-        int[] yAxis = new int[11];
+        long[] yAxis = new long[11];
         for (int i = 1; i < yAxis.length; i++) {
             yAxis[i] = maxTemperature * i / 10;
         }
@@ -49,7 +49,7 @@ public class TemperatureShowDialog extends Dialog {
         });
     }
 
-    public void append2GTemperatureNode(int speed) {
+    public void append2GTemperatureNode(long speed) {
         if (m2GTemperatureNode == null) {
             m2GTemperatureNode = new NodeStrQueue(COUNT_NODE);
             mXyAxisCvs.addLine(new LineBeen("2.4G ℃", Color.blue, m2GTemperatureNode));
@@ -61,7 +61,7 @@ public class TemperatureShowDialog extends Dialog {
         mXyAxisCvs.repaint();
     }
 
-    public void append5GTemperatureNode(int speed) {
+    public void append5GTemperatureNode(long speed) {
 
         if (m5GTemperatureNode == null) {
             m5GTemperatureNode = new NodeStrQueue(COUNT_NODE);
@@ -73,9 +73,9 @@ public class TemperatureShowDialog extends Dialog {
         mXyAxisCvs.repaint();
     }
 
-    private void setValueRange(int speed) {
+    private void setValueRange(long speed) {
         if (speed > maxTemperature) {
-            int temp = speed;
+            long temp = speed;
             int exponent = 0;
             while (temp > 9) {
                 temp /= 10;
@@ -87,7 +87,7 @@ public class TemperatureShowDialog extends Dialog {
         }
 
         if (speed < minTemperature) {
-            int temp = speed;
+            long temp = speed;
             int exponent = 0;
             while (temp > 9) {
                 temp /= 10;
@@ -102,8 +102,8 @@ public class TemperatureShowDialog extends Dialog {
     }
 
     private void resetYAxis() {
-        int[] yAxis = new int[11];
-        int per = maxTemperature - minTemperature;
+        long[] yAxis = new long[11];
+        long per = maxTemperature - minTemperature;
         per /= 10;
         yAxis[0] = minTemperature;
         yAxis[10] = maxTemperature;

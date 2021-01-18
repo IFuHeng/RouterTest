@@ -166,7 +166,7 @@ public class SQLiteJDBC<T> extends Utils {
                 }
             }
         }
-        log("Records created successfully");
+//        log("Records created successfully");
     }
 
     /**
@@ -323,7 +323,7 @@ public class SQLiteJDBC<T> extends Utils {
                 }
             }
         }
-        log("Operation done successfully");
+//        log("Operation done successfully");
     }
 
     public void update(int id, T t) {
@@ -374,7 +374,7 @@ public class SQLiteJDBC<T> extends Utils {
             }
         }
 
-        log("Operation done successfully");
+//        log("Operation done successfully");
     }
 
     public void deleteById(int id) {
@@ -399,7 +399,7 @@ public class SQLiteJDBC<T> extends Utils {
                 }
             }
         }
-        log("Operation done successfully");
+//        log("Operation done successfully");
     }
 
     public void drop() {
@@ -448,7 +448,7 @@ public class SQLiteJDBC<T> extends Utils {
                 }
             }
         }
-        log("clear done successfully");
+//        log("clear done successfully");
     }
 
     /**
@@ -483,7 +483,7 @@ public class SQLiteJDBC<T> extends Utils {
                 }
             }
         }
-        log("Operation done successfully");
+//        log("Operation done successfully");
 
         return result;
     }
@@ -581,6 +581,5 @@ public class SQLiteJDBC<T> extends Utils {
                 }
             }
         }
-
     }
 }

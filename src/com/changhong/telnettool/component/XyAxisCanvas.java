@@ -14,7 +14,7 @@ public class XyAxisCanvas extends Canvas {
 
     private ArrayList<LineBeen> mLines;
 
-    private int[] yAxis;
+    private long[] yAxis;
     private String[] yAxisStr;
     private String[] xAxis;
 
@@ -32,17 +32,23 @@ public class XyAxisCanvas extends Canvas {
 
     private final Font FONT_LINE_STR = new Font(Font.SANS_SERIF, Font.PLAIN, 10);
 
-    public XyAxisCanvas(int[] yAxis, String[] xAxis) {
+    private boolean isShowPointStr = true;//是否显示每个点文字
+
+    public XyAxisCanvas(long[] yAxis, String[] xAxis) {
         setYAxis(yAxis);
         this.xAxis = xAxis;
         mLines = new ArrayList<>();
+        setPreferredSize(new Dimension(400, 160));
+        setMinimumSize(new Dimension(300, 120));
     }
 
-    public XyAxisCanvas(int[] yAxis, String[] yAxisStr, String[] xAxis) {
+    public XyAxisCanvas(long[] yAxis, String[] yAxisStr, String[] xAxis) {
         setYAxis(yAxis, yAxisStr);
         this.xAxis = xAxis;
 
         mLines = new ArrayList<>();
+        setPreferredSize(new Dimension(400, 160));
+        setMinimumSize(new Dimension(300, 120));
     }
 
 
@@ -66,7 +72,7 @@ public class XyAxisCanvas extends Canvas {
         repaint();
     }
 
-    public void setYAxis(int[] axis) {
+    public void setYAxis(long[] axis) {
         this.yAxis = axis;
         this.yAxisStr = new String[axis.length];
         for (int i = 0; i < axis.length; i++) {
@@ -74,7 +80,7 @@ public class XyAxisCanvas extends Canvas {
         }
     }
 
-    public void setYAxis(int[] axis, String[] axisStr) {
+    public void setYAxis(long[] axis, String[] axisStr) {
         if (axis == null)
             return;
         if (axisStr == null || axis.length != axisStr.length) {
@@ -125,7 +131,7 @@ public class XyAxisCanvas extends Canvas {
         int y = getHeight() - mPaddingBottom - g.getFont().getSize();
         int h = y - mPaddingTop - g.getFont().getSize();
         int w = getWidth() - mPaddingRight - x;
-        int valueRange = yAxis[yAxis.length - 1] - yAxis[0];
+        long valueRange = yAxis[yAxis.length - 1] - yAxis[0];
 
         g.setColor(Color.red);
         // draw x axis
@@ -229,17 +235,17 @@ public class XyAxisCanvas extends Canvas {
                 continue;
 
             for (int i = 0; i < nodeQueue.size() && i < xAxis.length; ++i) {
-                Pair<Integer, String> child = nodeQueue.elementAt(i);
-                int item = child.getKey();
+                Pair<Long, String> child = nodeQueue.elementAt(i);
+                Long item = child.getKey();
                 int axIndex = xAxis.length - 1 - i;
                 int tx = perX * axIndex;
                 tx += x;
-                int ty = item - yAxis[0];
+                int ty = (int) (item - yAxis[0]);
                 ty *= h;
                 ty /= valueRange;
                 ty = y - ty;
 
-                switch (i % 5) {
+                switch (j % 5) {
                     case 2:
                         g.drawOval(tx - 2, ty - 2, 4, 4);
                         break;
@@ -262,11 +268,11 @@ public class XyAxisCanvas extends Canvas {
 
                 String str = child.getValue();
                 int offX = g.getFontMetrics().stringWidth(str) >> 1;
-                if (axIndex > 0)
+                if (axIndex > 0 && isShowPointStr)
                     g.drawString(str, tx - offX, ty - 3);
                 if (i > 0) {
-                    int itemLast = nodeQueue.elementAt(i - 1).getKey();
-                    int tyl = itemLast - yAxis[0];
+                    Long itemLast = nodeQueue.elementAt(i - 1).getKey();
+                    int tyl = (int) (itemLast - yAxis[0]);
                     tyl *= h;
                     tyl /= valueRange;
                     tyl = y - tyl;
@@ -284,7 +290,7 @@ public class XyAxisCanvas extends Canvas {
         for (int i = 0; i < xAxis.length; i++) {
             xAxis[i] = String.valueOf(i);
         }
-        int[] yAxis = new int[11];
+        long[] yAxis = new long[11];
         for (int i = 1; i < yAxis.length; i++) {
             yAxis[i] = i * 10;
         }
@@ -306,7 +312,7 @@ public class XyAxisCanvas extends Canvas {
         {
             NodeStrQueue points1 = new NodeStrQueue(20);
             for (int i = 0; i < 10; i++) {
-                int value = (int) (Math.random() * 100);
+                Long value = Math.round(Math.random() * 100);
                 String str = String.valueOf(value);
                 points1.push(new Pair<>(value, str));
             }
@@ -343,5 +349,13 @@ public class XyAxisCanvas extends Canvas {
     private void initBufferedCache() {
         bi = createAlphaBufferedImage(getWidth(), getHeight());
         tg = bi.createGraphics();
+    }
+
+    public boolean isShowPointStr() {
+        return isShowPointStr;
+    }
+
+    public void setShowPointStr(boolean showPointStr) {
+        isShowPointStr = showPointStr;
     }
 }

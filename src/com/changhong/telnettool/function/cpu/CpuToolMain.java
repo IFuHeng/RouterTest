@@ -165,9 +165,8 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
             panel.add(new JLabel("  刷新间隔:"));
             panel.add(mViewInterval);
             panel.add(new JLabel("秒"));
-
             panel.add(mBtnPlayOrPause);
-            panel.setMinimumSize(new Dimension(600, 300));
+
             panel2.add(panel);
         }
         {// ip port play in north
@@ -269,14 +268,14 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
         panel.add(mProgressViewMem);
         float level = Tool.getScreenSizeLevel();
         if (level >= 2.5f) {
-            mProgressViewCpu.setSize(400, 400);
-            mProgressViewMem.setSize(400, 400);
+            mProgressViewCpu.setPreferredSize(new Dimension(400, 400));
+            mProgressViewMem.setPreferredSize(new Dimension(400, 400));
         } else if (level >= 2) {
-            mProgressViewCpu.setSize(240, 240);
-            mProgressViewMem.setSize(240, 240);
+            mProgressViewCpu.setPreferredSize(new Dimension(240, 240));
+            mProgressViewMem.setPreferredSize(new Dimension(240, 240));
         } else if (level >= 1.5f) {
-            mProgressViewCpu.setSize(200, 200);
-            mProgressViewMem.setSize(200, 200);
+            mProgressViewCpu.setPreferredSize(new Dimension(200, 200));
+            mProgressViewMem.setPreferredSize(new Dimension(200, 200));
         }
 
         {//阈值设置
@@ -353,6 +352,11 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
         mTvCpuThreshold.setEnabled(false);
         if (mTvCpuThreshold.getText().trim().length() < 2) {
             mTvCpuThreshold.setText("10");
+        }
+
+        //如果更改过输出数据库文件，则清除旧的数据显示窗口。
+        if (!mViewOutPutField.getText().equals(Preferences.getInstance().readString(KEY_DB_NAME) != null)) {
+            mShowDbDialog = null;
         }
 
         //保存配置

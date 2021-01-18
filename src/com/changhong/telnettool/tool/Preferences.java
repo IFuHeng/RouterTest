@@ -190,11 +190,14 @@ public class Preferences {
     }
 
     private synchronized JSONObject getContentJson() {
-        String string = IOUtils.loadFile(PATH_SETTINGS);
-        if (string != null)
-            return JSONObject.parseObject(string);
-        else
-            return null;
+        File file = new File(PATH_SETTINGS);
+        if (file.exists()) {
+            String string = IOUtils.loadFile(PATH_SETTINGS);
+            if (string != null)
+                return JSONObject.parseObject(string);
+        }
+
+        return null;
     }
 
     public synchronized Preferences save(String key, Object value) {

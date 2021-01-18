@@ -4,13 +4,13 @@ import javafx.util.Pair;
 
 import java.util.Arrays;
 
-public class NodeStrQueue implements Queue<Pair<Integer, String>> {
-    final int[] array;
+public class NodeStrQueue implements Queue<Pair<Long, String>> {
+    final long[] array;
     int size;
     final String[] arrayStr;
 
     public NodeStrQueue(int initialCapacity) {
-        this.array = new int[initialCapacity];
+        this.array = new long[initialCapacity];
         this.arrayStr = new String[initialCapacity];
     }
 
@@ -23,7 +23,7 @@ public class NodeStrQueue implements Queue<Pair<Integer, String>> {
     }
 
     @Override
-    public synchronized int push(Pair<Integer, String> p) {
+    public synchronized int push(Pair<Long, String> p) {
         for (int i = array.length - 1; i > 0; i--) {
             array[i] = array[i - 1];
         }
@@ -51,7 +51,7 @@ public class NodeStrQueue implements Queue<Pair<Integer, String>> {
         return sb.toString();
     }
 
-    public synchronized Pair<Integer, String> elementAt(int index) {
+    public synchronized Pair<Long, String> elementAt(int index) {
 
         if (index >= size)
             throw new ArrayIndexOutOfBoundsException(index + " >= " + size);
@@ -84,19 +84,19 @@ public class NodeStrQueue implements Queue<Pair<Integer, String>> {
         size = 0;
     }
 
-    public synchronized Pair<Integer, String> poll() {
+    public synchronized Pair<Long, String> poll() {
         if (isEmpty())
             return null;
-        int first = array[0];
+        long first = array[0];
         String firstStr = arrayStr[0];
         remove(0);
         return new Pair(first, firstStr);
     }
 
-    public synchronized Pair<Integer, String> peek() {
+    public synchronized Pair<Long, String> peek() {
         if (isEmpty())
             return null;
-        int first = array[0];
+        long first = array[0];
         String firstStr = arrayStr[0];
         return new Pair(first, firstStr);
     }

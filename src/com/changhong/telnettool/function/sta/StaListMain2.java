@@ -8,6 +8,7 @@ import com.changhong.telnettool.event.TextInputLengthLimitListener;
 import com.changhong.telnettool.tool.DataManager;
 import com.changhong.telnettool.tool.Preferences;
 import com.changhong.telnettool.tool.Tool;
+import com.changhong.telnettool.ui.SpeedShowComponent;
 import com.changhong.telnettool.webinterface.BWR510LocalConnectionHelper;
 import com.changhong.telnettool.webinterface.been.ConnectType;
 import com.changhong.telnettool.webinterface.been.StaInfo;
@@ -58,6 +59,7 @@ public class StaListMain2 extends JFrame implements ActionListener, Runnable {
     private JButton mBtnShow;
     private JTextField mViewOutPutField;
     private ShowDbDialog mShowDbDialog;
+    private SpeedShowComponent mSpeedComponent;
     /************* value *********************/
     private Thread mThread;
     private List<StaInfo> mArrStaInfo = new ArrayList<>();
@@ -130,48 +132,66 @@ public class StaListMain2 extends JFrame implements ActionListener, Runnable {
             }
 
             {// tx and rx show
-                mViewTxSpeed = new JLabel(Tool.getSpeedStringBit(0));
+                mViewTxSpeed = new JLabel(Tool.getSpeedStringBit(0), JLabel.CENTER);
                 Font font = mViewTxSpeed.getFont();
                 font = new Font(font.getName(), font.getStyle(), font.getSize() * 2);//new Font(Font.SANS_SERIF, Font.BOLD, 35);
                 {
                     mViewTxSpeed.setForeground(new Color(0xFF008B8B));
                     mViewTxSpeed.setFont(font);
                 }
-                mViewRxSpeed = new JLabel(Tool.getSpeedStringBit(0));
+                mViewRxSpeed = new JLabel(Tool.getSpeedStringBit(0), JLabel.CENTER);
                 {
                     mViewRxSpeed.setForeground(new Color(0xFF00EE76));
                     mViewRxSpeed.setFont(font);
                 }
 
-                mViewTxSpeed2$4G = new JLabel(Tool.getSpeedStringBit(0));
+                mViewTxSpeed2$4G = new JLabel(Tool.getSpeedStringBit(0), JLabel.CENTER);
                 {
                     TitledBorder border = BorderFactory.createTitledBorder("2.4G");
                     border.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, border.getTitleFont().getSize()));
+                    border.setTitleColor(Color.orange);
                     mViewTxSpeed2$4G.setBorder(border);
                     mViewTxSpeed2$4G.setForeground(new Color(0xFF008B8B));
+                    int size = mViewTxSpeed2$4G.getFont().getSize();
+                    mViewTxSpeed2$4G.setSize(size * 6, size * 3);
+                    mViewTxSpeed2$4G.setPreferredSize(new Dimension(size * 6, size * 3));
                 }
-                mViewTxSpeed5G = new JLabel(Tool.getSpeedStringBit(0));
+                mViewTxSpeed5G = new JLabel(Tool.getSpeedStringBit(0), JLabel.CENTER);
                 {
                     TitledBorder border = BorderFactory.createTitledBorder("5G");
                     border.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, border.getTitleFont().getSize()));
+                    border.setTitleColor(Color.pink);
                     mViewTxSpeed5G.setBorder(border);
                     mViewTxSpeed5G.setForeground(new Color(0xFF008B8B));
+                    int size = mViewTxSpeed5G.getFont().getSize();
+                    mViewTxSpeed5G.setSize(size * 6, size * 3);
+                    mViewTxSpeed5G.setPreferredSize(new Dimension(size * 6, size * 3));
+
                 }
 
-                mViewRxSpeed2$4G = new JLabel(Tool.getSpeedStringBit(0));
+                mViewRxSpeed2$4G = new JLabel(Tool.getSpeedStringBit(0), JLabel.CENTER);
                 {
                     TitledBorder border = BorderFactory.createTitledBorder("2.4G");
                     border.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, border.getTitleFont().getSize()));
+                    border.setTitleColor(Color.orange);
                     mViewRxSpeed2$4G.setBorder(border);
                     mViewRxSpeed2$4G.setForeground(new Color(0xFF00EE76));
+                    int size = mViewRxSpeed2$4G.getFont().getSize();
+                    mViewRxSpeed2$4G.setSize(size * 6, size * 3);
+                    mViewRxSpeed2$4G.setPreferredSize(new Dimension(size * 6, size * 3));
                 }
-                mViewRxSpeed5G = new JLabel(Tool.getSpeedStringBit(0));
+                mViewRxSpeed5G = new JLabel(Tool.getSpeedStringBit(0), JLabel.CENTER);
                 {
                     TitledBorder border = BorderFactory.createTitledBorder("5G");
                     border.setTitleFont(new Font(Font.DIALOG, Font.PLAIN, border.getTitleFont().getSize()));
+                    border.setTitleColor(Color.pink);
                     mViewRxSpeed5G.setBorder(border);
                     mViewRxSpeed5G.setForeground(new Color(0xFF00EE76));
+                    int size = mViewRxSpeed5G.getFont().getSize();
+                    mViewRxSpeed5G.setSize(size * 6, size * 3);
+                    mViewRxSpeed5G.setPreferredSize(new Dimension(size * 6, size * 3));
                 }
+                mSpeedComponent = new SpeedShowComponent();
 
                 JPanel panel = new JPanel();
                 {
@@ -192,6 +212,7 @@ public class StaListMain2 extends JFrame implements ActionListener, Runnable {
                     }
                     panel.add(panelTx);
                     panel.add(panelRx);
+                    panel.add(mSpeedComponent);
                 }
 
                 panel2.add(panel, BorderLayout.SOUTH);
@@ -229,7 +250,7 @@ public class StaListMain2 extends JFrame implements ActionListener, Runnable {
                 };
                 if (i == 5 || i == 2 || i == 3 || i == 4) {
                     render.setHorizontalAlignment(SwingConstants.CENTER);
-                } else if (i == 7 || i == 6)
+                } else if (i == 7 || i == 6 || i == 8)
                     render.setHorizontalAlignment(SwingConstants.RIGHT);
                 column.setCellRenderer(render);
             }
@@ -513,6 +534,7 @@ public class StaListMain2 extends JFrame implements ActionListener, Runnable {
         final long[] tmpBytesAll = new long[6];// [上一次的上行速度, 上一次的下行速度, 上一次的2.4G上行速度, 上一次的2.4G下行速度, 上一次的5G上行速度, 上一次的5G下行速度]
         final long[] bytesAll = new long[6];// [上行总量, 下行总量, 2.4G上行总量, 2.4G下行总量, 5G上行总量, 5G下行总量 ]
         final String gateway = mViewIP.getText();
+        boolean isNew = true;
 
         String outPath = mViewOutPutField.getText();
         if (outPath.endsWith(".db"))
@@ -557,31 +579,44 @@ public class StaListMain2 extends JFrame implements ActionListener, Runnable {
                         }
                     }
 
-                    for (int i = 0; i < tmpBytesAll.length; i++) {
-                        speedAll[i] = (tmpBytesAll[i] - bytesAll[i]) * 1000 / interval2;
+                    if (isNew) {//第一次只执行数据存储
+                        System.arraycopy(tmpBytesAll, 0, bytesAll, 0, tmpBytesAll.length);
+                        isNew = false;
+                    } else {
+                        for (int i = 0; i < tmpBytesAll.length; i++) {
+                            speedAll[i] = Math.max(tmpBytesAll[i] - bytesAll[i], 0) * 1000 / interval2;
+                        }
+                        System.arraycopy(tmpBytesAll, 0, bytesAll, 0, tmpBytesAll.length);
+                        mViewTxSpeed.setText(Tool.getSpeedString(speedAll[1]));
+                        mViewRxSpeed.setText(Tool.getSpeedString(speedAll[0]));
+                        mViewTxSpeed2$4G.setText(Tool.getSpeedString(speedAll[3]));
+                        mViewRxSpeed2$4G.setText(Tool.getSpeedString(speedAll[2]));
+                        mViewTxSpeed5G.setText(Tool.getSpeedString(speedAll[5]));
+                        mViewRxSpeed5G.setText(Tool.getSpeedString(speedAll[4]));
+                        mSpeedComponent.appendUploadSpeedNode(speedAll[1]);
+                        mSpeedComponent.appendDownloadSpeedNode(speedAll[0]);
                     }
-                    System.arraycopy(tmpBytesAll, 0, bytesAll, 0, tmpBytesAll.length);
-
-                    // 刷新Ui
-                    mViewTxSpeed.setText(Tool.getSpeedString(speedAll[1]));
-                    mViewRxSpeed.setText(Tool.getSpeedString(speedAll[0]));
-                    mViewTxSpeed2$4G.setText(Tool.getSpeedString(speedAll[3]));
-                    mViewRxSpeed2$4G.setText(Tool.getSpeedString(speedAll[2]));
-                    mViewTxSpeed5G.setText(Tool.getSpeedString(speedAll[5]));
-                    mViewRxSpeed5G.setText(Tool.getSpeedString(speedAll[4]));
                 } else {
                     Arrays.fill(speedAll, 0);
-                    for (StaInfo b : staInfos) {
-                        bytesAll[0] += b.getDownload();
-                        bytesAll[1] += b.getUpload();
-                        if (b.getConnectType() == ConnectType.WIFI24) {
-                            bytesAll[2] += b.getDownload();
-                            bytesAll[3] += b.getUpload();
-                        } else if (b.getConnectType() == ConnectType.WIFI5) {
-                            bytesAll[4] += b.getDownload();
-                            bytesAll[5] += b.getUpload();
-                        }
-                    }
+                    mViewTxSpeed.setText(Tool.getSpeedString(0));
+                    mViewRxSpeed.setText(Tool.getSpeedString(0));
+                    mViewTxSpeed2$4G.setText(Tool.getSpeedString(0));
+                    mViewRxSpeed2$4G.setText(Tool.getSpeedString(0));
+                    mViewTxSpeed5G.setText(Tool.getSpeedString(0));
+                    mViewRxSpeed5G.setText(Tool.getSpeedString(0));
+                    mSpeedComponent.appendUploadSpeedNode(0);
+                    mSpeedComponent.appendDownloadSpeedNode(0);
+//                    for (StaInfo b : staInfos) {
+//                        bytesAll[0] += b.getDownload();
+//                        bytesAll[1] += b.getUpload();
+//                        if (b.getConnectType() == ConnectType.WIFI24) {
+//                            bytesAll[2] += b.getDownload();
+//                            bytesAll[3] += b.getUpload();
+//                        } else if (b.getConnectType() == ConnectType.WIFI5) {
+//                            bytesAll[4] += b.getDownload();
+//                            bytesAll[5] += b.getUpload();
+//                        }
+//                    }
                 }
 
                 compareProgress(databaseOffline, staInfos);
