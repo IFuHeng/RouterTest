@@ -615,24 +615,21 @@ public class TestTelnetTool extends JFrame implements ActionListener, WindowStat
             if (cmd.contains("\\n"))
                 cmd = cmd.replace("\\n", ";");
             System.out.println("send :   " + cmd);
-            String temp = telnetManager.sendCommand(cmd);
             try {
+                String temp = telnetManager.sendCommand(cmd);
                 testWlanSpeed(temp);
                 testWlanTemperature(temp);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            mViewResponse.append(temp);
-            if (fileWriter != null)
-                try {
+                mViewResponse.append(temp);
+                if (fileWriter != null) {
                     fileWriter.write(Tool.getTime());
                     fileWriter.write(':');
                     fileWriter.write(' ');
                     fileWriter.write(temp);
                     fileWriter.write('\n');
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             if (!commandBeen.isUnlimited)
                 commandBeans.remove(commandBeen);

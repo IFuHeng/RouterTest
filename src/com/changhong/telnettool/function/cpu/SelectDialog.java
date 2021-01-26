@@ -97,7 +97,7 @@ public class SelectDialog extends Dialog implements ItemListener, ActionListener
             if (rtb.getModel().isSelected()) {
                 result.add(str);
             } else
-                result.remove(index);
+                result.remove(str);
         }
     }
 

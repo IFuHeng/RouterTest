@@ -124,7 +124,7 @@ public class ResetExam extends JFrame implements ActionListener, Runnable {
 
     private void startPlay() {
 
-        mBtnPlayOrPause.setLabel(ACTION_PAUSE);
+        mBtnPlayOrPause.setText(ACTION_PAUSE);
         mBtnPlayOrPause.setActionCommand(ACTION_PAUSE);
 
         mViewIP.setEnabled(false);
@@ -137,7 +137,7 @@ public class ResetExam extends JFrame implements ActionListener, Runnable {
     }
 
     private void stopPlay() {
-        mBtnPlayOrPause.setLabel(ACTION_PLAY);
+        mBtnPlayOrPause.setText(ACTION_PLAY);
         mBtnPlayOrPause.setActionCommand(ACTION_PLAY);
 
         mViewIP.setEnabled(true);
@@ -190,6 +190,10 @@ public class ResetExam extends JFrame implements ActionListener, Runnable {
             Tool.log("login: " + info);
             mTvResponse.append(info);
             mTvResponse.append("\n");
+
+            int originalDeviceMode = getDeviceMode(telnetManager);
+            mTvResponse.append("原始DEVICE_MODE = " + originalDeviceMode);
+            mTvResponse.append("\n");
         } catch (Exception e) {
             e.printStackTrace();
             // 初始化telnet失败，输出结束信息，并关闭输出流，返回
@@ -198,22 +202,32 @@ public class ResetExam extends JFrame implements ActionListener, Runnable {
             Toolkit.getDefaultToolkit().beep();
             return;
         }
-
-        int originalDeviceMode = getDeviceMode(telnetManager);
-        mTvResponse.append("原始DEVICE_MODE = " + originalDeviceMode);
-        mTvResponse.append("\n");
-
-        String resetFlashResult = telnetManager.sendCommand(CMD_FLASH_RESET);
-        mTvResponse.append("启动flash reset： \n" + resetFlashResult);
-        mTvResponse.append("\n");
-        Tool.log("flash reset = " + resetFlashResult);
+        try {
+            String resetFlashResult = telnetManager.sendCommand(CMD_FLASH_RESET);
+            mTvResponse.append("启动flash reset： \n" + resetFlashResult);
+            mTvResponse.append("\n");
+            Tool.log("flash reset = " + resetFlashResult);
+        } catch (Exception e) {
+            e.printStackTrace();
+            stopPlay();
+            mTvResponse.append("启动flash reset失败： " + e.getMessage());
+            Toolkit.getDefaultToolkit().beep();
+            return;
+        }
 
         mTvResponse.append("flash reset完成 \n\n\n");
         // 启动按钮命令是 ACTION_PAUSE 并且 要运行的命令集合非空，执行循环
         while (mBtnPlayOrPause.getActionCommand().equals(ACTION_PAUSE)) {
             long costTime = System.currentTimeMillis();//每次循环消耗时间
             Tool.log("----------------round---------------------");
-            int temp = getDeviceMode(telnetManager);
+            int temp = -1;
+            try {
+                temp = getDeviceMode(telnetManager);
+            } catch (Exception e) {
+                e.printStackTrace();
+                mTvResponse.append("登录Telnet失败： " + e.getMessage());
+                break;
+            }
             Tool.log("Flash DEVICE_MODE = " + temp);
             mTvResponse.append("Flash DEVICE_MODE=" + temp);
             mTvResponse.append("\n");
@@ -221,7 +235,12 @@ public class ResetExam extends JFrame implements ActionListener, Runnable {
             if (temp == 0) {
                 mTvResponse.append("Flash reset完成\n");
                 mTvResponse.append("启动reboot");
-                Tool.log(telnetManager.sendCommand("reboot"));
+                try {
+                    Tool.log(telnetManager.sendCommand("reboot"));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    mTvResponse.append("reboot 失败： " + e.getMessage());
+                }
                 break;
             }
             costTime = System.currentTimeMillis() - costTime;
@@ -239,7 +258,7 @@ public class ResetExam extends JFrame implements ActionListener, Runnable {
         Toolkit.getDefaultToolkit().beep();
     }
 
-    private int getDeviceMode(TelnetClientHelper telnetManager) {
+    private int getDeviceMode(TelnetClientHelper telnetManager) throws Exception {
         String temp = telnetManager.sendCommand(CMD_GET_MODE);
         temp = temp.substring(temp.indexOf('=') + 1);
         return Integer.parseInt(temp);

@@ -153,7 +153,6 @@ public class IOUtils {
             }
         }
 
-
         return Toolkit.getDefaultToolkit().getImage(url);
     }
 }

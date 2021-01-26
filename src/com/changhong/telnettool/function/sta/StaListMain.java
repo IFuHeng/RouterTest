@@ -385,123 +385,125 @@ public class StaListMain extends JFrame implements ActionListener, Runnable {
             new AlertDialog(this, "警告", e.getMessage()).setVisible(true);
             return;
         }
-
-        // 启动按钮命令是 ACTION_PAUSE 并且 要运行的命令集合非空，执行循环
-        while (mBtnPlayOrPause.getActionCommand().equals(ACTION_PAUSE)) {
-            long costTime = System.currentTimeMillis();//每次循环消耗时间
+        try {
+            // 启动按钮命令是 ACTION_PAUSE 并且 要运行的命令集合非空，执行循环
+            while (mBtnPlayOrPause.getActionCommand().equals(ACTION_PAUSE)) {
+                long costTime = System.currentTimeMillis();//每次循环消耗时间
 //            Tool.log("----------------round---------------------");
 
-            String temp = telnetManager.sendCommand(CMD_GET_STA_NAME);
-            ArrayList<StaInfo1> arrStaInfo1 = null;
-            ArrayList<StaInfo> arrStaInfo = null;
+                String temp = telnetManager.sendCommand(CMD_GET_STA_NAME);
+                ArrayList<StaInfo1> arrStaInfo1 = null;
+                ArrayList<StaInfo> arrStaInfo = null;
 
-            {//获取 下挂设备列表（name/ip/mac/lease）
-                byte[] data = Tool.analysisHexDump(temp);
-                arrStaInfo1 = StaInfo1.read(data);
-            }
-
-
-            {//获取当前表单  mac/上下行量、状态
-                temp = telnetManager.sendCommand(CMD_GET_STA_LIST_2p4G);
-                arrStaInfo = StaInfo.load(temp);
-                temp = telnetManager.sendCommand(CMD_GET_STA_LIST_5G);
-                ArrayList<StaInfo> arrStaInfo_2 = StaInfo.load(temp);
-                for (StaInfo staInfo : arrStaInfo_2) {
-                    staInfo.is5g = true;
+                {//获取 下挂设备列表（name/ip/mac/lease）
+                    byte[] data = Tool.analysisHexDump(temp);
+                    arrStaInfo1 = StaInfo1.read(data);
                 }
-                if (arrStaInfo_2 != null)
-                    arrStaInfo.addAll(arrStaInfo_2);
-            }
 
-            //填充IP和name和租期
-            for (StaInfo1 info1 : arrStaInfo1) {
-                for (StaInfo info : arrStaInfo) {
-                    if (info1.mac == info.getMAC()) {
-                        info.ip = info1.ip;
-                        info.name = info1.name;
-                        break;
+
+                {//获取当前表单  mac/上下行量、状态
+                    temp = telnetManager.sendCommand(CMD_GET_STA_LIST_2p4G);
+                    arrStaInfo = StaInfo.load(temp);
+                    temp = telnetManager.sendCommand(CMD_GET_STA_LIST_5G);
+                    ArrayList<StaInfo> arrStaInfo_2 = StaInfo.load(temp);
+                    for (StaInfo staInfo : arrStaInfo_2) {
+                        staInfo.is5g = true;
                     }
+                    if (arrStaInfo_2 != null)
+                        arrStaInfo.addAll(arrStaInfo_2);
                 }
-            }
 
-            // 速度计算,比较
-            if (!mArrSta.isEmpty()) {
-                final long interval2 = System.currentTimeMillis() - lastLoadTime;
-                lastLoadTime = System.currentTimeMillis();
-
-                Arrays.fill(tmpBytesAll, 0);
-
-                for (StaInfo b : arrStaInfo) {
-                    tmpBytesAll[0] += b.getTx_bytes();
-                    tmpBytesAll[1] += b.getRx_bytes();
-                    if (b.is5g()) {
-                        tmpBytesAll[4] += b.getTx_bytes();
-                        tmpBytesAll[5] += b.getRx_bytes();
-                    } else {
-                        tmpBytesAll[2] += b.getTx_bytes();
-                        tmpBytesAll[3] += b.getRx_bytes();
-                    }
-                    for (StaInfo a : mArrSta) {
-                        if (a.equals(b)) {
-                            b.speedTx = (int) ((b.getTx_bytes() - a.getTx_bytes()) * 1000 / interval2);
-                            b.speedRx = (int) ((b.getRx_bytes() - a.getRx_bytes()) * 1000 / interval2);
+                //填充IP和name和租期
+                for (StaInfo1 info1 : arrStaInfo1) {
+                    for (StaInfo info : arrStaInfo) {
+                        if (info1.mac == info.getMAC()) {
+                            info.ip = info1.ip;
+                            info.name = info1.name;
                             break;
                         }
                     }
                 }
 
-                for (int i = 0; i < tmpBytesAll.length; i++) {
-                    speedAll[i] = (tmpBytesAll[i] - bytesAll[i]) * 1000 / interval2;
-                }
-                System.arraycopy(tmpBytesAll, 0, bytesAll, 0, tmpBytesAll.length);
+                // 速度计算,比较
+                if (!mArrSta.isEmpty()) {
+                    final long interval2 = System.currentTimeMillis() - lastLoadTime;
+                    lastLoadTime = System.currentTimeMillis();
 
-                // 刷新Ui
-                mViewTxSpeed.setText(Tool.getSpeedStringBit(speedAll[1]));
-                mViewRxSpeed.setText(Tool.getSpeedStringBit(speedAll[0]));
-                mViewTxSpeed2$4G.setText(Tool.getSpeedStringBit(speedAll[3]));
-                mViewRxSpeed2$4G.setText(Tool.getSpeedStringBit(speedAll[2]));
-                mViewTxSpeed5G.setText(Tool.getSpeedStringBit(speedAll[5]));
-                mViewRxSpeed5G.setText(Tool.getSpeedStringBit(speedAll[4]));
-            } else {
-                Arrays.fill(speedAll, 0);
-                for (StaInfo b : arrStaInfo) {
-                    bytesAll[0] += b.getTx_bytes();
-                    bytesAll[1] += b.getRx_bytes();
-                    if (b.is5g()) {
-                        bytesAll[4] += b.getTx_bytes();
-                        bytesAll[5] += b.getRx_bytes();
-                    } else {
-                        bytesAll[2] += b.getTx_bytes();
-                        bytesAll[3] += b.getRx_bytes();
+                    Arrays.fill(tmpBytesAll, 0);
+
+                    for (StaInfo b : arrStaInfo) {
+                        tmpBytesAll[0] += b.getTx_bytes();
+                        tmpBytesAll[1] += b.getRx_bytes();
+                        if (b.is5g()) {
+                            tmpBytesAll[4] += b.getTx_bytes();
+                            tmpBytesAll[5] += b.getRx_bytes();
+                        } else {
+                            tmpBytesAll[2] += b.getTx_bytes();
+                            tmpBytesAll[3] += b.getRx_bytes();
+                        }
+                        for (StaInfo a : mArrSta) {
+                            if (a.equals(b)) {
+                                b.speedTx = (int) ((b.getTx_bytes() - a.getTx_bytes()) * 1000 / interval2);
+                                b.speedRx = (int) ((b.getRx_bytes() - a.getRx_bytes()) * 1000 / interval2);
+                                break;
+                            }
+                        }
+                    }
+
+                    for (int i = 0; i < tmpBytesAll.length; i++) {
+                        speedAll[i] = (tmpBytesAll[i] - bytesAll[i]) * 1000 / interval2;
+                    }
+                    System.arraycopy(tmpBytesAll, 0, bytesAll, 0, tmpBytesAll.length);
+
+                    // 刷新Ui
+                    mViewTxSpeed.setText(Tool.getSpeedStringBit(speedAll[1]));
+                    mViewRxSpeed.setText(Tool.getSpeedStringBit(speedAll[0]));
+                    mViewTxSpeed2$4G.setText(Tool.getSpeedStringBit(speedAll[3]));
+                    mViewRxSpeed2$4G.setText(Tool.getSpeedStringBit(speedAll[2]));
+                    mViewTxSpeed5G.setText(Tool.getSpeedStringBit(speedAll[5]));
+                    mViewRxSpeed5G.setText(Tool.getSpeedStringBit(speedAll[4]));
+                } else {
+                    Arrays.fill(speedAll, 0);
+                    for (StaInfo b : arrStaInfo) {
+                        bytesAll[0] += b.getTx_bytes();
+                        bytesAll[1] += b.getRx_bytes();
+                        if (b.is5g()) {
+                            bytesAll[4] += b.getTx_bytes();
+                            bytesAll[5] += b.getRx_bytes();
+                        } else {
+                            bytesAll[2] += b.getTx_bytes();
+                            bytesAll[3] += b.getRx_bytes();
+                        }
                     }
                 }
+
+                mArrSta.clear();
+                mArrSta.addAll(arrStaInfo);
+
+                ((AbstractTableModel) table.getModel()).fireTableDataChanged();
+
+                if (fileWriter != null)
+                    try {
+                        fileWriter.write(Tool.getTime());
+                        fileWriter.write(':');
+                        fileWriter.write(' ');
+                        fileWriter.write(temp);
+                        fileWriter.write('\n');
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                costTime = System.currentTimeMillis() - costTime;
+                if (costTime < interval)
+                    try {
+                        Thread.sleep(interval - costTime);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
             }
-
-            mArrSta.clear();
-            mArrSta.addAll(arrStaInfo);
-
-            ((AbstractTableModel) table.getModel()).fireTableDataChanged();
-
-            if (fileWriter != null)
-                try {
-                    fileWriter.write(Tool.getTime());
-                    fileWriter.write(':');
-                    fileWriter.write(' ');
-                    fileWriter.write(temp);
-                    fileWriter.write('\n');
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            costTime = System.currentTimeMillis() - costTime;
-            if (costTime < interval)
-                try {
-                    Thread.sleep(interval - costTime);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
         stopPlay();
         //输出结束信息并关闭输出流
         if (fileWriter != null)
@@ -528,85 +530,85 @@ public class StaListMain extends JFrame implements ActionListener, Runnable {
 //        test();
     }
 
-    public static final void test() {
-        TelnetClientHelper telnetManager = null;
-        long interval = 1000;
-        try {
-            telnetManager = new TelnetClientHelper("192.168.2.1", 23);
-            Tool.log("login: " + telnetManager.login("root", "admin2020@ch"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            // 初始化telnet失败，输出结束信息，并关闭输出流，返回
-            Toolkit.getDefaultToolkit().beep();
-            return;
-        }
-
-        // 启动按钮命令是 ACTION_PAUSE 并且 要运行的命令集合非空，执行循环
-//        while (System.currentTimeMillis() < Long.MAX_VALUE) {
-//            long costTime = System.currentTimeMillis();//每次循环消耗时间
-//            Tool.log("----------------round---------------------");
-
+//    public static final void test() {
+//        TelnetClientHelper telnetManager = null;
+//        long interval = 1000;
+//        try {
+//            telnetManager = new TelnetClientHelper("192.168.2.1", 23);
+//            Tool.log("login: " + telnetManager.login("root", "admin2020@ch"));
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            // 初始化telnet失败，输出结束信息，并关闭输出流，返回
+//            Toolkit.getDefaultToolkit().beep();
+//            return;
+//        }
+//
+//        // 启动按钮命令是 ACTION_PAUSE 并且 要运行的命令集合非空，执行循环
+////        while (System.currentTimeMillis() < Long.MAX_VALUE) {
+////            long costTime = System.currentTimeMillis();//每次循环消耗时间
+////            Tool.log("----------------round---------------------");
+//
+////        String temp = telnetManager.sendCommand(CMD_GET_STA_NAME);
+////        System.out.println(temp.getBytes().length);
+////        System.out.println(Arrays.toString(temp.getBytes()));
+//
+////        byte[] arr = telnetManager.sendCommandForBytes(CMD_GET_STA_NAME);
+////        System.out.println(Arrays.toString(CMD_GET_STA_NAME.getBytes()));
+////        System.out.println(arr.length);
+////        System.out.println(Arrays.toString(arr));
+////        ArrayList<StaInfo1> arrStaInfo1 = StaInfo1.read(arr);
+////        for (StaInfo1 info1 : arrStaInfo1) {
+////            System.out.println(info1);
+////        }
+////        Tool.showByteArrayData(arr);
+//
+////            costTime = System.currentTimeMillis() - costTime;
+////            if (costTime < interval)
+////                try {
+////                    Thread.sleep(interval - costTime);
+////                } catch (InterruptedException e) {
+////                    e.printStackTrace();
+////                }
+////        }
+//
 //        String temp = telnetManager.sendCommand(CMD_GET_STA_NAME);
-//        System.out.println(temp.getBytes().length);
-//        System.out.println(Arrays.toString(temp.getBytes()));
-
-//        byte[] arr = telnetManager.sendCommandForBytes(CMD_GET_STA_NAME);
-//        System.out.println(Arrays.toString(CMD_GET_STA_NAME.getBytes()));
-//        System.out.println(arr.length);
-//        System.out.println(Arrays.toString(arr));
-//        ArrayList<StaInfo1> arrStaInfo1 = StaInfo1.read(arr);
+////        System.out.println(temp);
+//        byte[] data = Tool.analysisHexDump(temp);
+////        System.out.println(Integer.toHexString(data.length));
+////        Tool.showByteArrayData(data);
+//        ArrayList<StaInfo1> arrStaInfo1 = StaInfo1.read(data);
+//
+//
+//        temp = telnetManager.sendCommand(CMD_GET_STA_LIST_2p4G);
+//        ArrayList<StaInfo> arrStaInfo = StaInfo.load(temp);
+//        temp = telnetManager.sendCommand(CMD_GET_STA_LIST_5G);
+//        ArrayList<StaInfo> arrStaInfo_2 = StaInfo.load(temp);
+//        for (StaInfo staInfo : arrStaInfo_2) {
+//            staInfo.is5g = true;
+//        }
+//        if (arrStaInfo_2 != null)
+//            arrStaInfo.addAll(arrStaInfo_2);
+//
 //        for (StaInfo1 info1 : arrStaInfo1) {
 //            System.out.println(info1);
-//        }
-//        Tool.showByteArrayData(arr);
-
-//            costTime = System.currentTimeMillis() - costTime;
-//            if (costTime < interval)
-//                try {
-//                    Thread.sleep(interval - costTime);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
+//            for (StaInfo info : arrStaInfo) {
+//                if (info1.mac == info.getMAC()) {
+//                    System.out.println("====> mac = " + Tool.turnMacString(info.getMAC()));
+//                    info.ip = info1.ip;
+//                    info.name = info1.name;
+//                    break;
 //                }
+//            }
 //        }
-
-        String temp = telnetManager.sendCommand(CMD_GET_STA_NAME);
-//        System.out.println(temp);
-        byte[] data = Tool.analysisHexDump(temp);
-//        System.out.println(Integer.toHexString(data.length));
-//        Tool.showByteArrayData(data);
-        ArrayList<StaInfo1> arrStaInfo1 = StaInfo1.read(data);
-
-
-        temp = telnetManager.sendCommand(CMD_GET_STA_LIST_2p4G);
-        ArrayList<StaInfo> arrStaInfo = StaInfo.load(temp);
-        temp = telnetManager.sendCommand(CMD_GET_STA_LIST_5G);
-        ArrayList<StaInfo> arrStaInfo_2 = StaInfo.load(temp);
-        for (StaInfo staInfo : arrStaInfo_2) {
-            staInfo.is5g = true;
-        }
-        if (arrStaInfo_2 != null)
-            arrStaInfo.addAll(arrStaInfo_2);
-
-        for (StaInfo1 info1 : arrStaInfo1) {
-            System.out.println(info1);
-            for (StaInfo info : arrStaInfo) {
-                if (info1.mac == info.getMAC()) {
-                    System.out.println("====> mac = " + Tool.turnMacString(info.getMAC()));
-                    info.ip = info1.ip;
-                    info.name = info1.name;
-                    break;
-                }
-            }
-        }
-
-        System.out.println();
-
-        for (StaInfo info : arrStaInfo) {
-            System.out.println(info);
-        }
-
-        telnetManager.disconnect();
-        Toolkit.getDefaultToolkit().beep();
-    }
+//
+//        System.out.println();
+//
+//        for (StaInfo info : arrStaInfo) {
+//            System.out.println(info);
+//        }
+//
+//        telnetManager.disconnect();
+//        Toolkit.getDefaultToolkit().beep();
+//    }
 
 }

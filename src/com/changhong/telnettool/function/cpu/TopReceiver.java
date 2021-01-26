@@ -3,6 +3,8 @@ package com.changhong.telnettool.function.cpu;
 import com.changhong.telnettool.task.BaseTelnetReceiver;
 import com.changhong.telnettool.tool.Tool;
 
+import java.awt.*;
+
 public class TopReceiver extends BaseTelnetReceiver<TopInfo> {
 
     private static final String CMD_TOP = "top -b -n 1";
@@ -23,7 +25,14 @@ public class TopReceiver extends BaseTelnetReceiver<TopInfo> {
             Tool.log("----------------round---------------------");
             long costTime = System.currentTimeMillis();//每次循环消耗时间
 
-            String top = telnetClientHelper.sendCommand(CMD_TOP);
+            String top = null;
+            try {
+                top = telnetClientHelper.sendCommand(CMD_TOP);
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toolkit.getDefaultToolkit().beep();
+                return;
+            }
             callback(new TopInfo(top));
 
             costTime = System.currentTimeMillis() - costTime;

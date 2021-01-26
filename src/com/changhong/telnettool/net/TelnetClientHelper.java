@@ -32,27 +32,24 @@ public class TelnetClientHelper {
      * @param user
      * @param password
      */
-    public String login(String user, String password) {
+    public String login(String user, String password) throws IOException {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(readUntil("login:"));
         write(user, false);
         stringBuilder.append(user);
 
-        try {//读取内容，直到获得 "PASSWORD:",结束循环 ； 或者读取到PS1（#）结束
-            char lastChar = PROMPT_PWD.charAt(PROMPT_PWD.length() - 1);
-            char ch = (char) in.read();
+        //读取内容，直到获得 "PASSWORD:",结束循环 ； 或者读取到PS1（#）结束
+        char lastChar = PROMPT_PWD.charAt(PROMPT_PWD.length() - 1);
+        char ch = (char) in.read();
 
-            while (true) {
-                stringBuilder.append(ch);
-                if (ch == lastChar && stringBuilder.toString().endsWith(PROMPT_PWD)) {
-                    break;
-                } else if (ch == prompt.charAt(prompt.length() - 1)) {
-                    return stringBuilder.toString();
-                }
-                ch = (char) in.read();
+        while (true) {
+            stringBuilder.append(ch);
+            if (ch == lastChar && stringBuilder.toString().endsWith(PROMPT_PWD)) {
+                break;
+            } else if (ch == prompt.charAt(prompt.length() - 1)) {
+                return stringBuilder.toString();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+            ch = (char) in.read();
         }
 
         if (password == null || password.length() == 0) {
@@ -63,8 +60,8 @@ public class TelnetClientHelper {
         write(password, false);
         boolean isPasswordCorrect = true;
         try {//读取内容，直到获得 "PASSWORD:",结束循环 ； 或者读取到PS1（#）结束
-            char lastChar = PROMPT_LOGIN.charAt(PROMPT_LOGIN.length() - 1);
-            char ch = (char) in.read();
+            lastChar = PROMPT_LOGIN.charAt(PROMPT_LOGIN.length() - 1);
+            ch = (char) in.read();
 
             while (true) {
                 stringBuilder.append(ch);
@@ -93,23 +90,18 @@ public class TelnetClientHelper {
      * @param pattern
      * @return
      */
-    public String readUntil(String pattern) {
-        try {
-            char lastChar = pattern.charAt(pattern.length() - 1);
-            StringBuffer sb = new StringBuffer();
-            char ch = (char) in.read();
+    public String readUntil(String pattern) throws IOException {
+        char lastChar = pattern.charAt(pattern.length() - 1);
+        StringBuffer sb = new StringBuffer();
+        char ch = (char) in.read();
 
-            while (true) {
-                sb.append(ch);
-                if (ch == lastChar && sb.toString().endsWith(pattern)) {
-                    return sb.toString();
-                }
-                ch = (char) in.read();
+        while (true) {
+            sb.append(ch);
+            if (ch == lastChar && sb.toString().endsWith(pattern)) {
+                return sb.toString();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+            ch = (char) in.read();
         }
-        return null;
     }
 
     /**
@@ -170,21 +162,16 @@ public class TelnetClientHelper {
      * @param command
      * @return
      */
-    public String sendCommand(String command) {
-        try {
-            command = command.trim();
-            write(command, true);
-            String result = readUntil(prompt + "").trim();
-            if (result.startsWith(command))
-                result = result.substring(command.length()).trim();
-            if (result.endsWith(prompt))
-                result = result.substring(0, result.length() - prompt.length()).trim();
+    public String sendCommand(String command) throws Exception {
+        command = command.trim();
+        write(command, true);
+        String result = readUntil(prompt + "").trim();
+        if (result.startsWith(command))
+            result = result.substring(command.length()).trim();
+        if (result.endsWith(prompt))
+            result = result.substring(0, result.length() - prompt.length()).trim();
 
-            return result;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.toString() + " : " + e.getMessage();
-        }
+        return result;
     }
 
     /**

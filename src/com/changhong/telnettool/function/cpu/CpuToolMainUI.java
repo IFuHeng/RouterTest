@@ -1,14 +1,12 @@
 package com.changhong.telnettool.function.cpu;
 
 import com.changhong.telnettool.component.PercentCycleCanvas;
-import com.changhong.telnettool.database.SQLiteJDBC;
 import com.changhong.telnettool.dialog.AlertDialog;
 import com.changhong.telnettool.dialog.ShowDbDialog;
 import com.changhong.telnettool.dialog.WebInterfaceDialog;
 import com.changhong.telnettool.event.MyWindowAdapter;
 import com.changhong.telnettool.event.PositiveNumberTextLimitListener;
 import com.changhong.telnettool.event.TextInputLengthLimitListener;
-import com.changhong.telnettool.net.TelnetClientHelper;
 import com.changhong.telnettool.tool.DataManager;
 import com.changhong.telnettool.tool.IOUtils;
 import com.changhong.telnettool.tool.Preferences;
@@ -21,29 +19,18 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /***
- * 你可以先把框架写好，比如： 有一个大功能点是 循环读取信息并写入日志，这个功能支持 命令手动添加 你给一个接口，这个接口允许使用者 通过你的界面添加 删除
- * 修改 命令，并可以配置每条命令的执行间隔时间（以秒为单位），你通过telnet发送，再把 回显内容打印到界面并间隔10或者30秒左右 写入日志 比如
- * 可以建立分组命令，每个组的循环时间是相同的，我有2个组，第一组有3条命令，间隔10秒执行一次，把结果按照 时间：结果1，结果2，结果3
- * 回显到界面并可以手动选择导出日志，第二组有5条，间隔时间30秒执行一次，把结果按照 时间：结果1，结果2，结果3
- * ，4，5，回显到界面并可以手动选择导出日志 要注意处理的是，有些回显内容 只有一个数字 或者 一行字符串，有些内容可能是一堆字符串
- *
+ * cpu、内存、进程监控ui
  * @author fuheng
- *
  */
-public class CpuToolMain extends JFrame implements ActionListener, Runnable {
+public class CpuToolMainUI extends JFrame implements ActionListener, java.util.Observer {
 
     /********序号*******/
     private static final long serialVersionUID = 7745711326889285938L;
     private static final String TITLE_FRAME = "任务管理器";
 
-    private static final String CMD_TOP = "top -b -n 1";
-    private static final String CMD_CPUINFO = "cat /proc/cpuinfo";
-    private static final String CMD_UPTIME2 = "cat /proc/uptime";
     private static final String[] TITLE_PROCESS = {"名称", "状态", "PID", "PPID", "CPU(%)", "内存(%)", "内存", "用户"};
 
     private static final String ACTION_PLAY = "START";
@@ -80,20 +67,16 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
     private TextField mViewOutPutField;
     private JButton mBtnExport;
     private JLabel mViewUpTime;
-
-    /************* value *********************/
-    private HashSet<String> mSetMonitorCmd = new HashSet<>();
-    private TopInfo mTmpTopInfo;
-    private SimpleDateFormat mSdf;
-    private ShowDbDialog mShowDbDialog;
-    private Thread mThread;
-    private boolean isRunning;
     /**
      * 打开进程内存监控选择对话框的按钮
      */
     private JButton mBtnShowProcessChoseDialog;
 
-    public CpuToolMain() {
+    /************* value *********************/
+    private ShowDbDialog mShowDbDialog;
+    private HashSet<String> mSetMonitorCmd = new HashSet<>();
+
+    public CpuToolMainUI() {
         super(TITLE_FRAME);
 
         Pair<String, Integer> version = DataManager.getVersionInfo();
@@ -114,16 +97,26 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
                     mSetMonitorCmd.add(s);
                 }
         }
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         addWindowListener(new MyWindowAdapter() {
+
+            @Override
+            public void windowActivated(WindowEvent e) {
+                refreshUiContent();
+                CpuMemProcessFunction.getInstance().addObserver(CpuToolMainUI.this);
+                super.windowActivated(e);
+            }
+
             @Override
             public void windowClosing(WindowEvent e) {
-                stopPlay();
-                dispose();
-                Tool.log(e);
-                if (mThread != null && !mThread.isInterrupted()) {
-                    mThread.interrupt();
+                if (CpuMemProcessFunction.getInstance().getState() == EventOfFunction.STARTED) {
+                    int i = JOptionPane.showConfirmDialog(null, "退出前是否关闭检测线程运行？", "中止运行", JOptionPane.YES_NO_OPTION);
+                    if (i == JOptionPane.YES_OPTION) {
+                        CpuMemProcessFunction.getInstance().stopPlay();
+                    }
                 }
-
+                CpuMemProcessFunction.getInstance().deleteObserver(CpuToolMainUI.this);
+                dispose();
                 super.windowClosing(e);
             }
         });
@@ -322,34 +315,21 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
     }
 
     private void startPlay() {
-
-        mBtnPlayOrPause.setLabel(ACTION_PAUSE);
-        mBtnPlayOrPause.setActionCommand(ACTION_PAUSE);
-
-        mViewIP.setEnabled(false);
-        mViewPort.setEnabled(false);
-        mViewAccount.setEnabled(false);
-        mViewPassword.setEnabled(false);
-        mViewInterval.setEnabled(false);
+        setUIWhenStart();
         String interval = mViewInterval.getText();
         if (interval.isEmpty() || interval.trim().isEmpty() || interval.indexOf('0') == 0)
             mViewInterval.setText(String.valueOf(DEFAULT_INTERVAL / 1000));
 
-        mViewOutPutField.setEnabled(false);
         String outPath = mViewOutPutField.getText();
         if (outPath.length() == 0) {
             mViewOutPutField.setText(DEFAULT_DB_NAME);
         } else if (!outPath.endsWith(".db")) {
             mViewOutPutField.setText(outPath + ".db");
         }
-        mBtnExport.setEnabled(false);
-
-        mTvMenThreshold.setEnabled(false);
         if (mTvMenThreshold.getText().trim().length() < 1) {
             mTvMenThreshold.setText("1");
         }
 
-        mTvCpuThreshold.setEnabled(false);
         if (mTvCpuThreshold.getText().trim().length() < 1) {
             mTvCpuThreshold.setText("1");
         }
@@ -370,21 +350,23 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
                 .commit();
 
         //启动线程
-        if (mThread != null && !mThread.isInterrupted()) {
-            isRunning = false;
-            mThread.interrupt();
-            while (mThread.isAlive()) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        //启动线程
-        mThread = new Thread(this);
-        isRunning = true;
-        mThread.start();
+        if (CpuMemProcessFunction.getInstance().getState() != EventOfFunction.STARTED)
+            CpuMemProcessFunction.getInstance().startPlay();
+    }
+
+    private void setUIWhenStart() {
+        mBtnPlayOrPause.setLabel(ACTION_PAUSE);
+        mBtnPlayOrPause.setActionCommand(ACTION_PAUSE);
+
+        mViewIP.setEnabled(false);
+        mViewPort.setEnabled(false);
+        mViewAccount.setEnabled(false);
+        mViewPassword.setEnabled(false);
+        mViewInterval.setEnabled(false);
+        mViewOutPutField.setEnabled(false);
+        mBtnExport.setEnabled(false);
+        mTvMenThreshold.setEnabled(false);
+        mTvCpuThreshold.setEnabled(false);
     }
 
     private void stopPlay() {
@@ -406,11 +388,40 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
 
         mViewUpTime.setVisible(false);
         mBtnShowProcessChoseDialog.setVisible(false);
+    }
 
-        isRunning = false;
-        if (mThread != null && !mThread.isInterrupted()) {
-            mThread.interrupt();
-            mThread = null;
+    private void refreshUiContent() {
+        if (CpuMemProcessFunction.getInstance().getState() == EventOfFunction.STARTED) {
+            setUIWhenStart();
+        } else {
+            stopPlay();
+        }
+
+        mSetMonitorCmd.clear();
+        if (CpuMemProcessFunction.getInstance().getData() != null) {
+            MissionDataBeen data = CpuMemProcessFunction.getInstance().getData();
+            if (data.getSetMonitorCmd() != null)
+                mSetMonitorCmd.addAll(data.getSetMonitorCmd());
+            mTvCpuThreshold.setText(String.valueOf(data.getCpuThreshold()));
+            mTvMenThreshold.setText(String.valueOf(data.getMemThreshold()));
+            mViewIP.setText(data.getIp());
+            mViewPort.setText(String.valueOf(data.getTelnet_password()));
+            mViewAccount.setText(data.getTelnet_user());
+            mViewPassword.setText(data.getTelnet_password());
+            mViewOutPutField.setText(data.getDbOutPath());
+        } else {
+            String[] arr = Preferences.getInstance().readStringArray(KEY_MONITOR_CMD);
+            if (arr != null)
+                for (String s : arr) {
+                    mSetMonitorCmd.add(s);
+                }
+            mTvCpuThreshold.setText(String.valueOf(Preferences.getInstance().readInt(KEY_THRESHOLD_CPU, 10)));
+            mTvMenThreshold.setText(String.valueOf(Preferences.getInstance().readInt(KEY_THRESHOLD_MEM, 30)));
+            mViewIP.setText(Tool.getGuessGateway());
+            mViewPort.setText(String.valueOf(Preferences.getInstance().readShort(KEY_PORT, (short) 23)));
+            mViewAccount.setText(Preferences.getInstance().readString(KEY_TELNET_ACCOUNT));
+            mViewPassword.setText(Preferences.getInstance().readString(KEY_TELNET_PASSWORD));
+            mViewOutPutField.setText(Preferences.getInstance().readString(KEY_DB_NAME));
         }
     }
 
@@ -455,13 +466,12 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
 
 
     private void showSettingDialog() {
-        if (mTmpTopInfo == null || mTmpTopInfo.getArrProcess() == null || mTmpTopInfo.getArrProcess().isEmpty())
+        TopInfo topInfo = CpuMemProcessFunction.getInstance().getTopInfo();
+        if (topInfo == null || topInfo.getArrProcess() == null || topInfo.getArrProcess().isEmpty())
             return;
 
         ArrayList<ProcessInfo> arr = new ArrayList<>();
-        for (ProcessInfo process : mTmpTopInfo.getArrProcess()) {//不添加当前top命令
-            if (CMD_TOP.equals(process.command))
-                continue;
+        for (ProcessInfo process : topInfo.getArrProcess()) {//不添加当前top命令
             arr.add(process);
         }
         String[] choices = new String[arr.size()];//选项
@@ -511,10 +521,8 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
             }
             startPlay();
         } else if (e.getActionCommand().equals(ACTION_PAUSE)) {
-//            mTopReceiver.stop();
-            stopPlay();
-        }//export
-        else if (e.getActionCommand().equals(ACTION_EXPORT)) {
+            CpuMemProcessFunction.getInstance().stopPlay();
+        } else if (e.getActionCommand().equals(ACTION_EXPORT)) {//export
             showFileDialog2ChooseFile();
         } else if (e.getActionCommand().equals(ACTION_SETTING)) {
             showSettingDialog();
@@ -543,180 +551,38 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
 
 
     @Override
-    public void run() {
-        String IP = mViewIP.getText();
-        String USER = mViewAccount.getText();
-//        System.out.println(USER);
-        String PASSWORD = new String(mViewPassword.getPassword());
-//        System.out.println(PASSWORD);
-        int port = Tool.turnString2Int(mViewPort.getText(), 23);
-
-
-        final int refreshInterval;//刷新间隔
-        {
-            int interval = Tool.turnString2Int(mViewInterval.getText(), 0);//每次请求间隔 <=1s
-            if (interval == 0)
-                interval = DEFAULT_INTERVAL;
-            else interval *= 1000;
-            refreshInterval = interval;
-        }
-        long lastRunTime = refreshInterval;//计算上次运行top的时间，运行后，被赋值为0，等待值超过 refreshInterval
-
-        int memThreshold = Integer.parseInt(mTvMenThreshold.getText());
-        int cpuThreshold = Integer.parseInt(mTvCpuThreshold.getText());
-
-        String outPath = mViewOutPutField.getText();
-        if (outPath.endsWith(".db"))
-            outPath = outPath.replace(".db", "");
-        File file = new File(outPath);
-        if (file.getAbsolutePath().indexOf('/') != -1) {
-            file = file.getParentFile();
-            if (!file.exists() || file.isFile()) {
-                file.mkdirs();
-            }
-        }
-        SQLiteJDBC databaseOffline = new SQLiteJDBC(outPath, ProcessOnOfflineEvent.class);
-        SQLiteJDBC databaseExceed = new SQLiteJDBC(outPath, ExceedThresholdEvent.class);
-        SQLiteJDBC databaseMemChange = new SQLiteJDBC(outPath, ProcessMemChangeEvent.class);
-
-        //输出开头信息
-        Toolkit.getDefaultToolkit().beep();
-        Tool.log("repared");
-        // 初始化telnet连接，并登录
-        TelnetClientHelper telnetManager;
-        try {
-            telnetManager = new TelnetClientHelper(IP, port);
-            Tool.log("login: " + telnetManager.login(USER, PASSWORD));
-        } catch (Exception e) {
-            e.printStackTrace();
-            // 初始化telnet失败，输出结束信息，并关闭输出流，返回
-            stopPlay();
-            Toolkit.getDefaultToolkit().beep();
-            return;
-        }
-
-        final long startTime = System.currentTimeMillis();//程序启动计时时间
-//        long uptime = getUpTime(telnetManager);//获取上电时间（分）
-        final long uptime = getUpTime2(telnetManager);//获取上电时间（毫秒）
-        mViewUpTime.setVisible(true);
-        mViewUpTime.setText(turnLong2Time(uptime));
-//        String cpuinfo = telnetManager.sendCommand(CMD_CPUINFO);
-//        Tool.log("cpu = " + cpuinfo);
-
-        while (isRunning) {
-            long costTime = System.currentTimeMillis();//每次循环消耗时间
-            long rUptime = costTime - startTime + uptime;
-            {
-                String strUptime = turnLong2Time(rUptime);
-                mViewUpTime.setText(strUptime);
-            }
-            if (isRunning && lastRunTime >= refreshInterval) {
-                System.out.println(getClass().getSimpleName() + " , ----------------round  " + mViewUpTime.getText() + "(上电时间)  " + DateFormat.getTimeInstance().format(new Date()) + "(系统时间) ---------------------");
-                lastRunTime = 0;
-                //读取top信息
-                String temp;
-                try {
-                    temp = telnetManager.sendCommand(CMD_TOP);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    new AlertDialog(this, "读取失败", "失败时间（"+DateFormat.getTimeInstance().format(new Date())+"）：" + e.getMessage()).setVisible(true);
-                    break;
-                }
-                //新的top信息
-                TopInfo info = new TopInfo(temp);
-                //刷新cpu和内存占用百分比图
-                mProgressViewMem.setPercent(info.getMemUseInfo().getUsedPercent());
-                mProgressViewCpu.setPercent(info.getCpuUsed());
-                Tool.log("cpu info= " + info.getCpuUseInfo());
-//            resetAllRow(info.getArrProcess());
-
-                // 如果选择进程对话框未显示，并且读取的进程集合不为空 ----->  显示进程选择对话框入口按钮
-                if (!mBtnShowProcessChoseDialog.isVisible() && info.getArrProcess() != null && !info.getArrProcess().isEmpty())
-                    mBtnShowProcessChoseDialog.setVisible(true);
-
-                //对比和存储
-                compareProgress(databaseOffline, databaseExceed, databaseMemChange,
-                        info, memThreshold, cpuThreshold, (int) rUptime);
-
-                //刷新列表
-                mTmpTopInfo = info;
+    public void update(Observable o, Object arg) {
+        Pair<EventOfFunction, Object> pair = (Pair<EventOfFunction, Object>) arg;
+        switch (pair.getKey()) {
+            case ERROR:
+                new AlertDialog(this, "错误", pair.getValue().toString()).setVisible(true);
+            case STOPED:
+                stopPlay();
+                break;
+            case STARTED:
+                setUIWhenStart();
+                refreshUiContent();
+                break;
+            case REFRESH_TIME:
+                if (!mViewUpTime.isVisible())
+                    mViewUpTime.setVisible(true);
+                mViewUpTime.setText((String) pair.getValue());
+                break;
+            case REFRESH_CHANGE:
+                break;
+            case REFRESH_DATA:
                 ((AbstractTableModel) table.getModel()).fireTableDataChanged();
-            }
-
-            if (isRunning)
-                try {
-                    long cost = System.currentTimeMillis() - costTime;
-                    Thread.sleep(cost > 1000 ? 1000 : cost);
-                    lastRunTime += System.currentTimeMillis() - costTime;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                TopInfo info = (TopInfo) pair.getValue();
+                if (info == null) {
+                    mProgressViewMem.setPercent(0);
+                    mProgressViewCpu.setPercent(0);
+                } else {
+                    mProgressViewMem.setPercent(info.getMemUseInfo().getUsedPercent());
+                    mProgressViewCpu.setPercent(info.getCpuUsed());
                 }
-        }
-        stopPlay();
-        telnetManager.disconnect();
-        Toolkit.getDefaultToolkit().beep();
-    }
-
-    private void compareProgress(SQLiteJDBC databaseOffline, SQLiteJDBC databaseExceed, SQLiteJDBC databaseMemChange, TopInfo info, int memThreshold, int cpuThreshold, int rUptime) {
-        long time = System.currentTimeMillis();//getCurrentTime();
-        //监控某条进程内存变化
-        HashMap<String, ProcessInfo> mapNewProcesses = new HashMap<>();
-
-        //存储上线和超过阈值
-        for (ProcessInfo arrProcess : info.getArrProcess()) {
-            if (CMD_TOP.equals(arrProcess.command) || !mSetMonitorCmd.contains(arrProcess.command))//排除掉当前Top命令 & 未监控的命令
-                continue;
-
-            if (arrProcess.getpMem() > memThreshold) {
-                databaseExceed.insert(new ExceedThresholdEvent(arrProcess, time, rUptime, false));
-            }
-            if (arrProcess.getpCpu() > cpuThreshold) {
-                databaseExceed.insert(new ExceedThresholdEvent(arrProcess, time, rUptime, true));
-            }
-
-            mapNewProcesses.put(arrProcess.getCommand(), arrProcess);
-        }
-
-        if (mTmpTopInfo == null) {
-            return;
-        }
-
-        //监控某项进程内存变化
-        if (!mapNewProcesses.isEmpty())
-            for (ProcessInfo process : mTmpTopInfo.getArrProcess()) {
-                String cmd = process.getCommand();
-                if (mSetMonitorCmd.contains(cmd) && mapNewProcesses.containsKey(cmd)) {
-                    if (mapNewProcesses.get(cmd).getVSZ() != process.getVSZ()) {
-                        databaseMemChange.insert(new ProcessMemChangeEvent(mapNewProcesses.get(cmd), time, rUptime));
-                    }
-                    break;
-                }
-            }
-
-        //记录新增进程
-        ArrayList<ProcessInfo> arrOnOffline = new ArrayList<>();
-        arrOnOffline.addAll(info.getArrProcess());
-        boolean diffSet = arrOnOffline.removeAll(mTmpTopInfo.getArrProcess());
-        if (diffSet) {
-            for (int i = 0; i < arrOnOffline.size(); i++) {//排除掉当前Top命令
-                if (CMD_TOP.equals(arrOnOffline.get(i).command))
-                    arrOnOffline.remove(i--);
-                else if (mSetMonitorCmd.contains(arrOnOffline.get(i).getCommand()))//当上线进程处于被监控列表时，才写入数据库
-                    databaseOffline.insert(new ProcessOnOfflineEvent(arrOnOffline.get(i), time, rUptime, true));
-            }
-        }
-
-        // 记录下线进程
-        arrOnOffline.clear();
-        arrOnOffline.addAll(mTmpTopInfo.getArrProcess());
-        diffSet = arrOnOffline.removeAll(info.getArrProcess());
-        if (diffSet) {
-            for (int i = 0; i < arrOnOffline.size(); i++) {//排除掉当前Top命令
-                if (CMD_TOP.equals(arrOnOffline.get(i).command))
-                    arrOnOffline.remove(i--);
-                else if (mSetMonitorCmd.contains(arrOnOffline.get(i).getCommand()))//当下线进程处于被监控列表时，才写入数据库
-                    databaseOffline.insert(new ProcessOnOfflineEvent(arrOnOffline.get(i), time, rUptime, false));
-            }
+                if (!mBtnShowProcessChoseDialog.isVisible())
+                    mBtnShowProcessChoseDialog.setVisible(true);
+                break;
         }
     }
 
@@ -728,7 +594,7 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
         }
 
         public int getRowCount() {
-            return mTmpTopInfo == null ? 0 : mTmpTopInfo.getArrProcess().size();
+            return CpuMemProcessFunction.getInstance().getTopInfo() == null ? 0 : CpuMemProcessFunction.getInstance().getTopInfo().getArrProcess().size();
         }
 
         @Override
@@ -762,7 +628,7 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
         public Object getValueAt(int row, int col) {
             if (col == 0)
                 return row + 1;
-            ProcessInfo process = mTmpTopInfo.getArrProcess().get(row);
+            ProcessInfo process = CpuMemProcessFunction.getInstance().getTopInfo().getArrProcess().get(row);
             switch (col - 1) {
                 case 0:
                     return process.getCommand();
@@ -787,62 +653,8 @@ public class CpuToolMain extends JFrame implements ActionListener, Runnable {
 
     }
 
-    private String getCurrentTime() {
-        if (mSdf == null)
-            mSdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return mSdf.format(new Date(System.currentTimeMillis()));
-    }
-
-    private long getUpTime2(TelnetClientHelper telnetManager) {
-        long result = 0;
-        try {
-            String temp = telnetManager.sendCommand(CMD_UPTIME2).trim();
-            int index;
-            if ((index = temp.indexOf(' ')) != 0)
-                temp = temp.substring(0, index);
-            return Math.round(Float.parseFloat(temp) * 1000);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    private static String turnLong2Time(long time) {
-        int ms = (int) (time % 1000);
-        int s = (int) (time / 1000);
-        int m = s / 60;
-        int h = m / 60;
-        int day = h / 24;
-        h %= 24;
-        m %= 60;
-        s %= 60;
-
-        StringBuilder sb = new StringBuilder();
-        if (day > 0)
-            sb.append(day).append("天 ");
-        if (h > 0)
-            sb.append(h).append(':');
-
-        sb.append(String.format("%02d:%02d", m, s));
-        return sb.toString();
-    }
 
     public static void main(String[] args) {
-        new CpuToolMain();
-//        System.out.println(DateFormat.getTimeInstance().format(new Date()));
-//        System.out.println(DateFormat.getTimeInstance(0).format(new Date()));
-//        System.out.println(DateFormat.getTimeInstance(1).format(new Date()));
-//        System.out.println(DateFormat.getTimeInstance(2).format(new Date()));
-//        System.out.println(DateFormat.getTimeInstance(3).format(new Date()));
-//
-//        System.out.println(DateFormat.getDateInstance().format(new Date()));
-//        System.out.println(DateFormat.getDateInstance(0).format(new Date()));
-//        System.out.println(DateFormat.getDateInstance(1).format(new Date()));
-//        System.out.println(DateFormat.getDateInstance(2).format(new Date()));
-//        System.out.println(DateFormat.getDateInstance(3).format(new Date()));
-//        SQLiteJDBC databaseOffline = new SQLiteJDBC("resource", ProcessOnOfflineEvent.class);
-//        Map map = databaseOffline.select();
-//        System.out.println(map);
-//        SQLiteJDBC databaseExceed = new SQLiteJDBC("123.db", ExceedThresholdEvent.class);
+        new CpuToolMainUI();
     }
 }
